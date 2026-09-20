@@ -1,0 +1,18 @@
+# Bind Hermes to an unused loopback port on your VPS (e.g., 127.0.0.1:9119). This 
+# ensures Hermes is only accessible locally and not exposed directly to the 
+# public internet
+services:
+  hermes:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes-agent
+    restart: unless-stopped
+    environment:
+      - HERMES_DASHBOARD=1
+      - HERMES_DASHBOARD_HOST=0.0.0.0
+      - HERMES_DASHBOARD_PORT=9119
+      - HERMES_DASHBOARD_INSECURE=1  # Traefik handles TLS and upstream routing
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    volumes:
+      - ./data:/root/.hermes
+    ports:
+      - "127.0.0.1:9119:9119"
