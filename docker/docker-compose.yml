@@ -1,18 +1,23 @@
-# Bind Hermes to an unused loopback port on your VPS (e.g., 127.0.0.1:9119). This 
-# ensures Hermes is only accessible locally and not exposed directly to the 
-# public internet
+# Bind Hermes to an unused loopback port on your VPS (e.g., 127.0.0.1:9119). This
+# ensures Hermes is only accessible locally and not exposed directly to the
+# public internet.
+#
+# network_mode: host is required here: Hermes's dashboard auth gate refuses to
+# bind 0.0.0.0 without an auth provider configured, and Docker's bridge-network
+# port publishing (`ports:`) can only forward to a container's 0.0.0.0/bridge-IP,
+# never to its internal 127.0.0.1. Host networking lets Hermes bind to the VPS's
+# real loopback interface, which Traefik (also on the host) reaches directly.
 services:
   hermes:
     image: nousresearch/hermes-agent:latest
     container_name: hermes-agent
     restart: unless-stopped
+    network_mode: host
     environment:
       - HERMES_DASHBOARD=1
-      - HERMES_DASHBOARD_HOST=0.0.0.0
+      - HERMES_DASHBOARD_HOST=127.0.0.1
       - HERMES_DASHBOARD_PORT=9119
       - HERMES_DASHBOARD_INSECURE=1  # Traefik handles TLS and upstream routing
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     volumes:
       - ./data:/root/.hermes
-    ports:
-      - "127.0.0.1:9119:9119"
