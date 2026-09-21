@@ -20,7 +20,7 @@ Cool
 
 1. Produce hashed password
 
-    docker exec hermes-agent python -c "from plugins.dashboard_auth.basic import hash_password; print(hash_password('b4hBgZ4Xw1RKRn2gSnPTNyvZ3hTA0wysSRM2cm7f4Q'))"
+    docker exec hermes-agent python -c "from plugins.dashboard_auth.basic import hash_password; print(hash_password('something-complicated...'))"
 
 2. copy the printed hash, then:
 
