@@ -22,4 +22,4 @@ services:
       - HERMES_DASHBOARD_INSECURE=1  # Traefik handles TLS and upstream routing
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     volumes:
-      - ./data:/root/.hermes
+      - ./data:/opt/data
