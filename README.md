@@ -15,6 +15,33 @@ Cool
   - `/learn filing an expense: open the portal, New > Expense, attached the receipt, submit`
   - More: https://claude.ai/share/20100be6-dc26-4a4b-85a0-d6ec8a9eedaf
 
+## Deploy on VPS
+
+Run it and check:
+
+```bash
+cd ~/code/hermes/docker
+docker compose up -d hermes
+docker logs --tail 100 hermes-agent
+```
+
+Configure user:
+
+```bash
+docker exec -u 10000 -e HOME=/opt/data hermes-agent \
+  hermes config set dashboard.basic_auth.username mpcal@pm.me
+
+docker exec -it -u 10000 -e HOME=/opt/data hermes-agent python -c \
+'from getpass import getpass; from plugins.dashboard_auth.basic import hash_password; import subprocess; subprocess.run(["hermes", "config", "set", "dashboard.basic_auth.password_hash", hash_password(getpass("Dashboard password: "))], check=True)'
+
+docker restart hermes-agent
+```
+
+Configure models:
+
+```bash
+  docker exec -it hermes-agent hermes model
+```
 
 ## Create login
 
