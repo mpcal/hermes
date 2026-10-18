@@ -1,6 +1,6 @@
 services:
   hermes:
-    image: nousresearch/hermes-agent:latest
+    image: nousresearch/hermes-agent@sha256:d3fd71ce5ca205d80a4da60b71a721a30b94eb74e6b16b168b3e5adbb8e77e85
     container_name: hermes-agent
     restart: unless-stopped
     # Removed network_mode: host
@@ -8,19 +8,19 @@ services:
     tty: true
     environment:
       - HERMES_DASHBOARD=1
-      - HERMES_DASHBOARD_HOST=0.0.0.0  # Must be 0.0.0.0 for port mapping to work properly[cite: 1]
+      - HERMES_DASHBOARD_HOST=0.0.0.0  # Must be 0.0.0.0 for port mapping to work properly
       - HERMES_DASHBOARD_PORT=9119
-      - HERMES_DASHBOARD_INSECURE=1    # Traefik handles TLS and upstream routing[cite: 1]
+      - HERMES_DASHBOARD_INSECURE=1    # Traefik handles TLS and upstream routing
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     volumes:
-      - /home/mike/.hermes:/opt/data  # Bind-mounts host config to the container data path[cite: 2]
+      - /home/mike/.hermes:/opt/data  # Bind-mounts host config to the container data path
     ports:
-      - "127.0.0.1:9119:9119"  # Allows your Traefik instance to route here locally[cite: 1]
+      - "127.0.0.1:9119:9119"  # Allows your Traefik instance to route here locally
     networks:
       - traefik-net
 
   proton-bridge:
-    image: ghcr.io/videocurio/proton-mail-bridge:latest
+    image: ghcr.io/videocurio/proton-mail-bridge@sha256:d44f6b12650c6b0f9e0aefee192d65c6e46d0a22bd5ec189e8624812fd139c8b
     container_name: proton-bridge
     restart: unless-stopped
     volumes:
