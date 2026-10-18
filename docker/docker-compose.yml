@@ -1,25 +1,34 @@
-# Bind Hermes to an unused loopback port on your VPS (e.g., 127.0.0.1:9119). This
-# ensures Hermes is only accessible locally and not exposed directly to the
-# public internet.
-#
-# network_mode: host is required here: Hermes's dashboard auth gate refuses to
-# bind 0.0.0.0 without an auth provider configured, and Docker's bridge-network
-# port publishing (`ports:`) can only forward to a container's 0.0.0.0/bridge-IP,
-# never to its internal 127.0.0.1. Host networking lets Hermes bind to the VPS's
-# real loopback interface, which Traefik (also on the host) reaches directly.
 services:
   hermes:
     image: nousresearch/hermes-agent:latest
     container_name: hermes-agent
     restart: unless-stopped
-    network_mode: host
+    # Removed network_mode: host
     stdin_open: true
     tty: true
     environment:
       - HERMES_DASHBOARD=1
-      - HERMES_DASHBOARD_HOST=127.0.0.1
+      - HERMES_DASHBOARD_HOST=0.0.0.0  # Must be 0.0.0.0 for port mapping to work properly[cite: 1]
       - HERMES_DASHBOARD_PORT=9119
-      - HERMES_DASHBOARD_INSECURE=1  # Traefik handles TLS and upstream routing
+      - HERMES_DASHBOARD_INSECURE=1    # Traefik handles TLS and upstream routing[cite: 1]
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     volumes:
-      - ~/.hermes:/opt/data  # so Hermes CLI and this instance share the same config
+      - /home/mike/.hermes:/opt/data  # Bind-mounts host config to the container data path[cite: 2]
+    ports:
+      - "127.0.0.1:9119:9119"  # Allows your Traefik instance to route here locally[cite: 1]
+    networks:
+      - traefik-net
+
+  proton-bridge:
+    image: ghcr.io/videocurio/proton-mail-bridge:latest
+    container_name: proton-bridge
+    restart: unless-stopped
+    volumes:
+      - /home/mike/.hermes/proton-mail-bridge-data:/root
+    networks:
+      - traefik-net
+
+# Ensure the shared network is declared
+networks:
+  traefik-net:
+    external: true
