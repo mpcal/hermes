@@ -1,6 +1,9 @@
 services:
   hermes:
-    image: nousresearch/hermes-agent@sha256:d3fd71ce5ca205d80a4da60b71a721a30b94eb74e6b16b168b3e5adbb8e77e85
+    image: hermes-agent-proton-internal:local
+    build:
+      context: .
+      dockerfile: Dockerfile.hermes
     container_name: hermes-agent
     restart: unless-stopped
     # Removed network_mode: host

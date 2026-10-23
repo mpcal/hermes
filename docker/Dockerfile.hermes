@@ -1,0 +1,13 @@
+FROM nousresearch/hermes-agent@sha256:d3fd71ce5ca205d80a4da60b71a721a30b94eb74e6b16b168b3e5adbb8e77e85
+
+COPY patches/proton-internal-email.patch /tmp/proton-internal-email.patch
+
+# Stop upgrades from silently applying the security exception to unexpected code.
+RUN echo 'fbc268651938255a340b409fad0dcb495b91db65360d0a8e19f1c5ceeb3532cf  /opt/hermes/plugins/platforms/email/adapter.py' | sha256sum -c - \
+    && cd /opt/hermes \
+    && git apply --check /tmp/proton-internal-email.patch \
+    && git apply /tmp/proton-internal-email.patch \
+    && python -m py_compile plugins/platforms/email/adapter.py \
+    && rm /tmp/proton-internal-email.patch
+
+LABEL ch.skybuddy.hermes.proton-internal-exception="1"

@@ -1,0 +1,68 @@
+--- a/plugins/platforms/email/adapter.py
++++ b/plugins/platforms/email/adapter.py
+@@ -16,7 +16,7 @@
+ from email.mime.multipart import MIMEMultipart
+ from email.mime.text import MIMEText
+ from email.mime.base import MIMEBase
+-from email.utils import formatdate
++from email.utils import formatdate, getaddresses
+ from email import encoders
+ from pathlib import Path
+ from typing import Any, Dict, List, Optional, Tuple
+@@ -259,6 +259,26 @@
+     return bool(a and b) and (a == b or a.endswith("." + b) or b.endswith("." + a))
+ 
+ 
++def _is_proton_internal_candidate(msg: email_lib.message.Message, sender_addr: str) -> bool:
++    """Only trust these Proton-stamped headers on an explicitly opted-in Bridge connection.
++
++    Proton must strip/replace external copies; encryption alone is not sender authentication.
++    A present Authentication-Results verdict is never overridden, even if empty or malformed.
++    """
++    if msg.get_all("Authentication-Results") is not None:
++        return False
++    from_headers = msg.get_all("From", [])
++    if len(from_headers) != 1:
++        return False
++    addresses = getaddresses(from_headers)
++    if len(addresses) != 1 or not addresses[0][1] or addresses[0][1].lower() != sender_addr:
++        return False
++    return all(
++        len(values := msg.get_all(name, [])) == 1 and values[0].strip().lower() == expected
++        for name, expected in (("X-Pm-Origin", "internal"), ("X-Pm-Content-Encryption", "end-to-end"))
++    )
++
++
+ def _verify_sender_authentication(msg: email_lib.message.Message, from_addr: str, *, authserv_id: str = "") -> Tuple[bool, str]:
+     """Verify the ``From:`` domain is authenticated; returns ``(authenticated, reason)``.
+     ``From:`` is attacker-controlled (GHSA-rxqh-5572-8m77); the only trustworthy signal is the
+@@ -359,6 +379,9 @@
+             self._require_authenticated_sender = bool(extra["require_authenticated_sender"])
+         else:
+             self._require_authenticated_sender = not _esecret_bool("EMAIL_TRUST_FROM_HEADER", False)
++        self._allow_proton_internal_without_auth_results = is_truthy_value(
++            extra.get("allow_proton_internal_without_auth_results"), default=False
++        )
+         # Optional authserv-id pinning Authentication-Results to the operator's own server (defeats an injected header sorting first).
+         self._authserv_id = (extra.get("authserv_id", "") or _get_secret("EMAIL_AUTHSERV_ID", "")).strip().lower()
+         self._seen_uids: set = set()
+@@ -583,7 +606,8 @@
+                 "message_id": msg.get("Message-ID", ""), "in_reply_to": msg.get("In-Reply-To", ""),
+                 "body": _extract_text_body(msg),
+                 "attachments": _extract_attachments(msg, skip_attachments=self._skip_attachments),
+-                "date": msg.get("Date", ""), "sender_authenticated": sender_authenticated, "auth_reason": auth_reason}
++                "date": msg.get("Date", ""), "sender_authenticated": sender_authenticated, "auth_reason": auth_reason,
++                "proton_internal_candidate": _is_proton_internal_candidate(msg, sender_addr)}
+ 
+     @staticmethod
+     def _allow_all_senders() -> bool:
+@@ -620,6 +644,9 @@
+         # From:. Only matters when an allowlist GRANTS access and allow-all is off; fail-closed.
+         if (self._require_authenticated_sender and self._allowlist_in_effect()
+                 and not self._allow_all_senders() and not msg_data.get("sender_authenticated", False)):
++            if self._allow_proton_internal_without_auth_results and msg_data.get("proton_internal_candidate", False):
++                logger.info("[Email] Accepting allowlisted sender via Proton-internal exception: %s", sender_addr)
++                return True
+             logger.warning("[Email] Dropping sender with unauthenticated From: %s (%s). If your mail server does not "
+                            "stamp Authentication-Results, set platforms.email.require_authenticated_sender: false "
+                            "(or EMAIL_TRUST_FROM_HEADER=true) to accept the risk.",
